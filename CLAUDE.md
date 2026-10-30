@@ -19,7 +19,11 @@ Hardware differs from the reference build:
 - Walk policy is at ~/policies/BEST_WALK_ONNX_2.onnx.
 - 2026-10-30: servo IDs 11 and 12 were on swapped joints (right hip
   roll/pitch); re-IDed in EEPROM so they now match the standard IDs.
-  Offsets for both must be re-measured with scripts/adjust_offset.py.
+  Offsets for both must be re-measured with scripts/adjust_offset.py
+  (done: right_hip_roll 0.186, right_hip_pitch 0.040).
+- Servo power: Mean Well 12V/10A. A 2A bench supply browned out half
+  the servos under policy load (they went silent on the bus, showing
+  as rustypot "Parsing error"). Needs ~10A+ headroom.
 - Controller is a generic 2.4GHz dongle pad, not an Xbox controller.
   Button mapping may need remapping in xbox_controller.py.
 

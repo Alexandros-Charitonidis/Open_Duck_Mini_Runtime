@@ -98,9 +98,46 @@ class HWI:
             with serial.Serial(self.usb_port, 1000000, timeout=0) as ser:
                 time.sleep(0.005)
                 ser.reset_input_buffer()
+                if self.bus_errors <= 3:
+                    self._capture_sync_read(ser)
         except Exception as flush_error:
             print(f"[HWI] flush failed: {flush_error}")
         self.io = rustypot.feetech(self.usb_port, 1000000)
+
+    def _capture_sync_read(self, ser):
+        """
+        Diagnostic: send the same SYNC_READ of present position that
+        rustypot uses and print every status packet in the reply.
+        """
+        ids = list(self.joints.values())
+        body = [0xFE, len(ids) + 4, 0x82, 56, 2, *ids]
+        ser.reset_input_buffer()
+        ser.write(bytes([0xFF, 0xFF, *body, ~sum(body) & 0xFF]))
+        ser.flush()
+        time.sleep(0.01)
+        raw = ser.read(1024)
+        print(f"[HWI capture] {len(raw)} bytes (expect {8 * len(ids)}): {raw.hex(' ')}")
+        i = 0
+        seen = []
+        while i + 4 <= len(raw):
+            if raw[i] != 0xFF or raw[i + 1] != 0xFF:
+                print(f"[HWI capture]   junk byte at {i}: 0x{raw[i]:02X}")
+                i += 1
+                continue
+            id, length = raw[i + 2], raw[i + 3]
+            pkt = raw[i : i + 4 + length]
+            if len(pkt) < 4 + length:
+                print(f"[HWI capture]   truncated packet id={id}: {pkt.hex(' ')}")
+                break
+            chk_ok = (~sum(pkt[2:-1]) & 0xFF) == pkt[-1]
+            err = pkt[4]
+            if err or not chk_ok or length != 4:
+                print(f"[HWI capture]   id={id} len={length} error_byte=0x{err:02X} checksum_ok={chk_ok}")
+            seen.append(id)
+            i += 4 + length
+        missing = [x for x in ids if x not in seen]
+        order_ok = seen == ids[: len(seen)]
+        print(f"[HWI capture]   packets from {len(seen)} servos, missing {missing}, order_ok={order_ok}")
 
     def set_kps(self, kps):
         self.kps = kps
