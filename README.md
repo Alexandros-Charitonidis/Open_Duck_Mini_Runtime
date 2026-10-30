@@ -1,5 +1,90 @@
 # Open Duck Mini Runtime
 
+> **This is a fork for a modified duck** (branch `duck-cm5`). The upstream
+> instructions follow below, unchanged. This section lists what differs.
+
+## This duck: CM5 build
+
+### Hardware differences from the reference build
+
+| Part | This duck | Reference |
+|---|---|---|
+| Computer | Raspberry Pi CM5 on the official CM5 IO Board, Pi OS Trixie | Pi Zero 2W |
+| Servos | Waveshare ST3215-HS (12V version, ~2x faster) | ST3215 7.4V |
+| Servo power | Mean Well 12V / 10A | 2S battery |
+| Serial adapter | CH343 on `/dev/ttyACM0` (no FTDI latency rule needed) | FTDI |
+| IMU | DFRobot 10DOF v2.0 (ADXL345 + ITG-3205) as a stand-in | BNO055 |
+| Foot switches | not fitted, contacts faked | fitted |
+| Controller | terminal keyboard | Xbox controller |
+
+Python 3.11 venv in `.venv`, managed by `uv`. Extra package: `gpiod`
+(Adafruit Blinka needs it on Pi 5 / CM5).
+
+### Files added or changed
+
+| File | What it does |
+|---|---|
+| `mini_bdx_runtime/mini_bdx_runtime/keyboard_controller.py` | **New.** Terminal keyboard control, a drop-in replacement for the Xbox controller. Works over SSH. |
+| `mini_bdx_runtime/mini_bdx_runtime/dfrobot_10dof_imu.py` | **New.** Driver for the DFRobot 10DOF IMU (direct I2C, no Blinka). Run it as a module to see the tilt in plain words. |
+| `mini_bdx_runtime/mini_bdx_runtime/rustypot_position_hwi.py` | **Changed.** Recovers from servo bus errors (flushes and reopens the port instead of crashing) and prints the raw servo replies on the first errors. |
+| `mini_bdx_runtime/mini_bdx_runtime/duck_config.py` | **Changed.** New config keys: `imu_type`, `imu_accel_axes`, `imu_gyro_axes`, `fake_feet_contacts`. |
+| `mini_bdx_runtime/mini_bdx_runtime/feet_contacts.py` | **Changed.** Adds `FakeFeetContacts` (both feet always down). |
+| `scripts/v2_rl_walk_mujoco.py` | **Changed.** `--keyboard` option; picks the IMU driver from the config; uses fake contacts if configured; imports the Xbox controller and antennas only when used. |
+| `scripts/check_imu_orientation.py` | **New.** Guided poses to find the IMU axis maps and write them to `duck_config.json`. |
+| `scripts/adjust_offset.py` | **New.** Re-measures one joint's offset, keeping the others as a reference. **Moves the servos.** |
+| `scripts/watch_joints.py` | **New.** Read-only live joint angles; `--find` names the servo you move by hand. |
+| `CLAUDE.md` | Notes on this duck's hardware and current status. |
+
+### Extra keys in `~/duck_config.json`
+
+```json
+"imu_type": "dfrobot_10dof",
+"imu_accel_axes": ["y", "x", "-z"],
+"imu_gyro_axes": ["y", "x", "-z"],
+"fake_feet_contacts": true
+```
+
+Without these keys the defaults match the reference build (BNO055, real
+foot switches).
+
+### Running
+
+All commands from `scripts/`:
+
+```bash
+# check the IMU (read-only)
+../.venv/bin/python -m mini_bdx_runtime.dfrobot_10dof_imu
+# find the IMU axis maps (read-only, guided)
+../.venv/bin/python check_imu_orientation.py
+# check which servo is which (read-only)
+../.venv/bin/python watch_joints.py --find
+# re-measure one joint's offset (moves the servos)
+../.venv/bin/python adjust_offset.py --joint right_hip_pitch
+# walk with keyboard control (starts paused, p to unpause, SPACE to stop)
+../.venv/bin/python v2_rl_walk_mujoco.py --onnx_model_path ~/policies/BEST_WALK_ONNX_2.onnx --keyboard
+# relax all servos (Ctrl+C in the walk script leaves them stiff)
+../.venv/bin/python turn_off.py
+```
+
+Walk script tuning: `-p` leg stiffness (default 30), `--cutoff_frequency`
+smoothing filter, `--save_obs 1` records the run to `robot_saved_obs.pkl`.
+
+Keyboard: `w`/`s` forward/back, `a`/`d` sideways, `q`/`e` turn,
+`SPACE` stop, `p` pause, `r` sprint, `+`/`-` step frequency, `h` head mode,
+`?` help.
+
+### Lessons learned
+
+- **Servo power needs ~10A.** On a 2A supply half the servos browned out
+  under load, which showed up as endless `Parsing error`s.
+- **Check servo IDs against joints** with `watch_joints.py --find`. Two
+  swapped servos made a hip slam into the frame.
+- **A firm, unresponsive crouch while held is normal** for
+  BEST_WALK_ONNX_2 at zero speed. It balances by stepping, so test it
+  free-standing.
+
+---
+
 ## Simplified install via pre-built Duck image
 
 As an alternative to setting up everything manually, the image release (current version: 0.2.3), available in the releases section of this repository, provides a ready-to-flash system image for the Open Duck Mini platform. It is tested to work on Open Duck hardware built to the standard specs.
