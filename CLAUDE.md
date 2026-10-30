@@ -17,6 +17,9 @@ Hardware differs from the reference build:
 - No foot switches fitted (GPIO 22/27). "fake_feet_contacts": true in
   duck_config.json reports both feet always down. Remove once fitted.
 - Walk policy is at ~/policies/BEST_WALK_ONNX_2.onnx.
+- 2026-10-30: servo IDs 11 and 12 were on swapped joints (right hip
+  roll/pitch); re-IDed in EEPROM so they now match the standard IDs.
+  Offsets for both must be re-measured with scripts/adjust_offset.py.
 - Controller is a generic 2.4GHz dongle pad, not an Xbox controller.
   Button mapping may need remapping in xbox_controller.py.
 
