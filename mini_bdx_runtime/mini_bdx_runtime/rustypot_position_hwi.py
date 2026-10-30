@@ -74,7 +74,33 @@ class HWI:
         self.kds = np.ones(len(self.joints)) * 0  # default kd
         self.low_torque_kps = np.ones(len(self.joints)) * 2
 
+        self.usb_port = usb_port
         self.io = rustypot.feetech(usb_port, 1000000)
+        self.bus_errors = 0
+
+    def _bus_error(self, e):
+        """
+        A late reply (e.g. a timeout on the first read after a pause) leaves
+        stale bytes in the serial input buffer, and every later rustypot
+        transfer then fails ("Parsing error") or panics (PanicException, a
+        BaseException). Reopening alone does not clear them: wait for late
+        bytes to land, flush the input buffer, then reopen.
+        """
+        if isinstance(e, (KeyboardInterrupt, SystemExit)):
+            raise e
+        self.bus_errors += 1
+        if self.bus_errors <= 5 or self.bus_errors % 50 == 0:
+            print(f"[HWI] bus error #{self.bus_errors} ({type(e).__name__}: {e}), flushing port")
+        self.io = None  # closes the port (rustypot opens it exclusively)
+        try:
+            import serial
+
+            with serial.Serial(self.usb_port, 1000000, timeout=0) as ser:
+                time.sleep(0.005)
+                ser.reset_input_buffer()
+        except Exception as flush_error:
+            print(f"[HWI] flush failed: {flush_error}")
+        self.io = rustypot.feetech(self.usb_port, 1000000)
 
     def set_kps(self, kps):
         self.kps = kps
@@ -121,9 +147,12 @@ class HWI:
             for joint, position in joints_positions.items()
         }
 
-        self.io.write_goal_position(
-            list(self.joints.values()), list(ids_positions.values())
-        )
+        try:
+            self.io.write_goal_position(
+                list(self.joints.values()), list(ids_positions.values())
+            )
+        except BaseException as e:
+            self._bus_error(e)
 
     def get_present_positions(self, ignore=[]):
         """
@@ -134,8 +163,8 @@ class HWI:
             present_positions = self.io.read_present_position(
                 list(self.joints.values())
             )
-        except Exception as e:
-            print(e)
+        except BaseException as e:
+            self._bus_error(e)
             return None
 
         present_positions = [
@@ -153,8 +182,8 @@ class HWI:
             present_velocities = self.io.read_present_velocity(
                 list(self.joints.values())
             )
-        except Exception as e:
-            print(e)
+        except BaseException as e:
+            self._bus_error(e)
             return None
 
         present_velocities = [
