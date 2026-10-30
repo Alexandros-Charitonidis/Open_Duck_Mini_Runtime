@@ -48,6 +48,11 @@ class DuckConfig:
 
         self.start_paused = self.json_config.get("start_paused", False)
         self.imu_upside_down = self.json_config.get("imu_upside_down", False)
+        # "bno055" (reference build) or "dfrobot_10dof"
+        self.imu_type = self.json_config.get("imu_type", "bno055")
+        # robot = map(chip), e.g. ["-y", "x", "z"]; see scripts/check_imu_orientation.py
+        self.imu_accel_axes = self.json_config.get("imu_accel_axes", ["x", "y", "z"])
+        self.imu_gyro_axes = self.json_config.get("imu_gyro_axes", ["x", "y", "z"])
         self.phase_frequency_factor_offset = self.json_config.get(
             "phase_frequency_factor_offset", 0.0
         )

@@ -8,7 +8,13 @@ Hardware differs from the reference build:
   reference speed, so BEST_WALK_ONNX_2 is expected to transfer poorly.
 - Serial adapter is CH343 on /dev/ttyACM0 (cdc_acm), not FTDI.
   README's ftdi_sio latency-timer rule does not apply.
-- No IMU fitted yet. BNO085 and ICM-42688-P on order.
+- Stand-in IMU: DFRobot 10DOF v2.0 (ADXL345 0x53, ITG-3205 0x68,
+  mag 0x0c, BMP280 0x77) on /dev/i2c-1, driver dfrobot_10dof_imu.py,
+  selected by "imu_type" in duck_config.json. Mounted upside down,
+  axis map ["y","x","-z"] (from scripts/check_imu_orientation.py).
+  BNO085 and ICM-42688-P on order.
+- blinka's `board` fails on CM5 (no gpiod in venv), so the stock
+  BNO055 code (raw_imu.py/imu.py) does not import as-is.
 - Controller is a generic 2.4GHz dongle pad, not an Xbox controller.
   Button mapping may need remapping in xbox_controller.py.
 

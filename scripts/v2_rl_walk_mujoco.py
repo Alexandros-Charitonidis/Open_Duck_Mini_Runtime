@@ -5,7 +5,6 @@ import numpy as np
 from mini_bdx_runtime.rustypot_position_hwi import HWI
 from mini_bdx_runtime.onnx_infer import OnnxInfer
 
-from mini_bdx_runtime.raw_imu import Imu
 from mini_bdx_runtime.poly_reference_motion import PolyReferenceMotion
 from mini_bdx_runtime.feet_contacts import FeetContacts
 from mini_bdx_runtime.eyes import Eyes
@@ -70,11 +69,22 @@ class RLWalk:
 
         self.start()
 
-        self.imu = Imu(
-            sampling_freq=int(self.control_freq),
-            user_pitch_bias=self.pitch_bias,
-            upside_down=self.duck_config.imu_upside_down,
-        )
+        if self.duck_config.imu_type == "dfrobot_10dof":
+            from mini_bdx_runtime.dfrobot_10dof_imu import Imu
+
+            self.imu = Imu(
+                sampling_freq=int(self.control_freq),
+                accel_axes=self.duck_config.imu_accel_axes,
+                gyro_axes=self.duck_config.imu_gyro_axes,
+            )
+        else:
+            from mini_bdx_runtime.raw_imu import Imu
+
+            self.imu = Imu(
+                sampling_freq=int(self.control_freq),
+                user_pitch_bias=self.pitch_bias,
+                upside_down=self.duck_config.imu_upside_down,
+            )
 
         self.feet_contacts = FeetContacts()
 
