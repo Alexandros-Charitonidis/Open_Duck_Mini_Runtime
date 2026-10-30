@@ -175,10 +175,21 @@ if __name__ == "__main__":
 
     cfg = DuckConfig(ignore_default=True)
     imu = Imu(50, accel_axes=cfg.imu_accel_axes, gyro_axes=cfg.imu_gyro_axes)
-    while True:
-        data = imu.get_data()
-        accel = data["accelero"]
-        print("gyro", np.around(data["gyro"], 3))
-        print("accelero", np.around(accel, 3), "|g|", np.around(np.linalg.norm(accel), 2))
-        print("---")
-        time.sleep(1 / 25)
+    try:
+        while True:
+            data = imu.get_data()
+            ax, ay, az = data["accelero"]
+            gx, gy, gz = data["gyro"]
+            # robot frame: x forward, y left, z up; accel reads +g on z upright
+            pitch = np.degrees(np.arctan2(-ax, az))
+            roll = np.degrees(np.arctan2(-ay, az))
+            print(
+                f"{abs(pitch):5.1f} deg NOSE {'DOWN' if pitch >= 0 else 'UP  '} | "
+                f"{abs(roll):5.1f} deg {'LEFT ' if roll >= 0 else 'RIGHT'} side down | "
+                f"turning {'LEFT ' if gz >= 0 else 'RIGHT'} {abs(gz):4.2f} rad/s",
+                end="\r",
+                flush=True,
+            )
+            time.sleep(1 / 10)
+    except KeyboardInterrupt:
+        print()
