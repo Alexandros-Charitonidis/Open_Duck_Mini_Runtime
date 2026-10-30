@@ -7,7 +7,6 @@ from mini_bdx_runtime.onnx_infer import OnnxInfer
 
 from mini_bdx_runtime.raw_imu import Imu
 from mini_bdx_runtime.poly_reference_motion import PolyReferenceMotion
-from mini_bdx_runtime.xbox_controller import XBoxController
 from mini_bdx_runtime.feet_contacts import FeetContacts
 from mini_bdx_runtime.eyes import Eyes
 from mini_bdx_runtime.sounds import Sounds
@@ -35,6 +34,7 @@ class RLWalk:
         save_obs=False,
         replay_obs=None,
         cutoff_frequency=None,
+        keyboard=False,
     ):
 
         self.duck_config = DuckConfig(config_json_path=duck_config_path)
@@ -96,7 +96,14 @@ class RLWalk:
 
         self.command_freq = 20  # hz
         if self.commands:
-            self.xbox_controller = XBoxController(self.command_freq)
+            if keyboard:
+                from mini_bdx_runtime.keyboard_controller import KeyboardController
+
+                self.xbox_controller = KeyboardController(self.command_freq)
+            else:
+                from mini_bdx_runtime.xbox_controller import XBoxController
+
+                self.xbox_controller = XBoxController(self.command_freq)
 
         # Reference motion, but we only really need the length of one phase
         # TODO
@@ -379,6 +386,11 @@ if __name__ == "__main__":
         help="replay the observations from a previous run (can be from the robot or from mujoco)",
     )
     parser.add_argument("--cutoff_frequency", type=float, default=None)
+    parser.add_argument(
+        "--keyboard",
+        action="store_true",
+        help="control from the terminal keyboard instead of a gamepad",
+    )
 
     args = parser.parse_args()
     pid = [args.p, args.i, args.d]
@@ -395,6 +407,7 @@ if __name__ == "__main__":
         save_obs=args.save_obs,
         replay_obs=args.replay_obs,
         cutoff_frequency=args.cutoff_frequency,
+        keyboard=args.keyboard,
     )
     print("Done instantiating RLWalk")
     rl_walk.run()
