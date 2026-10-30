@@ -13,8 +13,10 @@ Hardware differs from the reference build:
   selected by "imu_type" in duck_config.json. Mounted upside down,
   axis map ["y","x","-z"] (from scripts/check_imu_orientation.py).
   BNO085 and ICM-42688-P on order.
-- blinka's `board` fails on CM5 (no gpiod in venv), so the stock
-  BNO055 code (raw_imu.py/imu.py) does not import as-is.
+- gpiod is installed in the venv (blinka's `board` needs it on CM5).
+- No foot switches fitted (GPIO 22/27). "fake_feet_contacts": true in
+  duck_config.json reports both feet always down. Remove once fitted.
+- Walk policy is at ~/policies/BEST_WALK_ONNX_2.onnx.
 - Controller is a generic 2.4GHz dongle pad, not an Xbox controller.
   Button mapping may need remapping in xbox_controller.py.
 

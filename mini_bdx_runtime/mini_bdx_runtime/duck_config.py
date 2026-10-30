@@ -53,6 +53,8 @@ class DuckConfig:
         # robot = map(chip), e.g. ["-y", "x", "z"]; see scripts/check_imu_orientation.py
         self.imu_accel_axes = self.json_config.get("imu_accel_axes", ["x", "y", "z"])
         self.imu_gyro_axes = self.json_config.get("imu_gyro_axes", ["x", "y", "z"])
+        # no foot switches fitted: report both feet always in contact
+        self.fake_feet_contacts = self.json_config.get("fake_feet_contacts", False)
         self.phase_frequency_factor_offset = self.json_config.get(
             "phase_frequency_factor_offset", 0.0
         )

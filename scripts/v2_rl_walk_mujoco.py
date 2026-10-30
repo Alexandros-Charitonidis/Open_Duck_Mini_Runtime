@@ -6,10 +6,9 @@ from mini_bdx_runtime.rustypot_position_hwi import HWI
 from mini_bdx_runtime.onnx_infer import OnnxInfer
 
 from mini_bdx_runtime.poly_reference_motion import PolyReferenceMotion
-from mini_bdx_runtime.feet_contacts import FeetContacts
+from mini_bdx_runtime.feet_contacts import FeetContacts, FakeFeetContacts
 from mini_bdx_runtime.eyes import Eyes
 from mini_bdx_runtime.sounds import Sounds
-from mini_bdx_runtime.antennas import Antennas
 from mini_bdx_runtime.projector import Projector
 from mini_bdx_runtime.rl_utils import make_action_dict, LowPassActionFilter
 from mini_bdx_runtime.duck_config import DuckConfig
@@ -86,7 +85,11 @@ class RLWalk:
                 upside_down=self.duck_config.imu_upside_down,
             )
 
-        self.feet_contacts = FeetContacts()
+        if self.duck_config.fake_feet_contacts:
+            print("WARNING: no foot switches, feet contacts are faked as always down")
+            self.feet_contacts = FakeFeetContacts()
+        else:
+            self.feet_contacts = FeetContacts()
 
         # Scales
         self.action_scale = action_scale
@@ -135,6 +138,8 @@ class RLWalk:
                 volume=1.0, sound_directory="../mini_bdx_runtime/assets/"
             )
         if self.duck_config.antennas:
+            from mini_bdx_runtime.antennas import Antennas
+
             self.antennas = Antennas()
 
     def get_obs(self):

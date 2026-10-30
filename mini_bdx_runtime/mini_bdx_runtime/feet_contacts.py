@@ -24,6 +24,15 @@ class FeetContacts:
         self.left_foot.deinit()
         self.right_foot.deinit()
 
+class FakeFeetContacts:
+    """Stand-in for when no foot switches are fitted: both feet always down."""
+
+    def get(self):
+        return [True, True]
+
+    def stop(self):
+        pass
+
 if __name__ == "__main__":
     feet_contacts = FeetContacts()
     try:
